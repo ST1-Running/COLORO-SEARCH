@@ -5,46 +5,250 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-<title>Maintenance</title>
+<title>COLORO SEARCH SYSTEM</title>
 
 <script src="https://cdn.tailwindcss.com"></script>
 
 <style>
-
-body{
-  background:
-  linear-gradient(
-    135deg,
-    #020617,
-    #0f172a,
-    #1e1b4b
-  );
-
-  min-height:100vh;
-  display:flex;
-  justify-content:center;
-  align-items:center;
-  font-family:Arial;
-  color:white;
+body {
+  background: linear-gradient(135deg, #020617, #0f172a, #1e1b4b);
+  min-height: 100vh;
+  font-family: Arial;
 }
 
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 20px;
+}
 </style>
 
 </head>
+<body class="text-white p-6">
 
-<body>
+<div class="max-w-7xl mx-auto">
 
-<div class="text-center">
+  <!-- HEADER -->
+  <div class="text-center mb-10">
+    <h1 class="text-5xl font-black mb-4 bg-gradient-to-r from-cyan-400 to-indigo-400 text-transparent bg-clip-text">
+      COLORO SEARCH SYSTEM
+    </h1>
+    <p class="text-slate-300 text-lg">
+      Live Google Spreadsheet Database
+    </p>
+  </div>
 
-  <h1 class="text-6xl font-black mb-6 text-cyan-400">
-    WEBSITE UNDER MAINTENANCE
-  </h1>
+  <!-- SEARCH BAR -->
+  <div class="grid md:grid-cols-2 gap-6 mb-8">
 
-  <p class="text-2xl text-slate-300">
-    We will be back soon 🚀
-  </p>
+    <!-- SEARCH -->
+    <div class="bg-white/10 backdrop-blur-lg border border-white/10 rounded-3xl p-6 shadow-2xl">
+      <label class="block text-cyan-300 font-bold text-lg mb-3">
+        Search COLORO Name or Code
+      </label>
+      <input
+        type="text"
+        id="searchInput"
+        placeholder="Example: BLUE or 123456 or 123-45-67"
+        class="w-full bg-slate-900 border border-slate-700 rounded-2xl px-5 py-4 outline-none"
+      >
+    </div>
+
+    <!-- SEASON FILTER -->
+    <div class="bg-white/10 backdrop-blur-lg border border-white/10 rounded-3xl p-6 shadow-2xl">
+      <label class="block text-pink-300 font-bold text-lg mb-3">
+        Filter by Season
+      </label>
+      <select
+        id="seasonFilter"
+        class="w-full bg-slate-900 border border-slate-700 rounded-2xl px-5 py-4 outline-none"
+      >
+        <option value="">All Season</option>
+      </select>
+    </div>
+
+  </div>
+
+  <!-- TABLE -->
+  <div class="bg-white/10 backdrop-blur-lg border border-white/10 rounded-3xl overflow-hidden shadow-2xl">
+    <div class="overflow-auto max-h-[700px]">
+      <table class="w-full">
+        <thead class="bg-slate-900 sticky top-0">
+          <tr>
+            <th class="text-left px-6 py-4 text-cyan-300">No</th>
+            <th class="text-left px-6 py-4 text-cyan-300">COLORO NAME</th>
+            <th class="text-left px-6 py-4 text-cyan-300">COLORO CODE</th>
+            <th class="text-left px-6 py-4 text-cyan-300">SEASON</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr>
+            <td colspan="4" class="text-center py-10 text-slate-400">
+              Loading database...
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
 
 </div>
+
+<script>
+let excelData = [];
+
+const tableBody = document.getElementById('tableBody');
+const searchInput = document.getElementById('searchInput');
+const seasonFilter = document.getElementById('seasonFilter');
+
+// HANDLE GOOGLE DATA
+function handleData(response) {
+  const rows = response.table.rows;
+  excelData = [];
+
+  let seasonCounters = {}; // track numbering per season
+
+  rows.forEach(row => {
+    const season = row.c[2]?.v || '-';
+    const seasonKey = season.trim().toLowerCase();
+
+    if (!seasonCounters[seasonKey]) {
+      seasonCounters[seasonKey] = 1;
+    } else {
+      seasonCounters[seasonKey]++;
+    }
+
+    excelData.push({
+      no: seasonCounters[seasonKey], // freeze number at load time
+      name: row.c[0]?.v || '-',
+      code: row.c[1]?.v || '-',
+      season: season
+    });
+  });
+
+  generateSeason();
+  renderTable(excelData);
+}
+
+// LOAD GOOGLE SHEET
+function loadGoogleSheet() {
+  const sheetID = '1jGFnDTAKKexeODhLQ8zNbEw_iaz48xy5o0jB2GzTCLk';
+  const query = encodeURIComponent('SELECT A,B,C');
+  const url = `https://docs.google.com/spreadsheets/d/${sheetID}/gviz/tq?sheet=All%20Season&tq=${query}&tqx=responseHandler:handleData`;
+
+  const script = document.createElement('script');
+  script.src = url;
+  document.body.appendChild(script);
+}
+
+// GENERATE SEASON
+function generateSeason() {
+  const seasons = [...new Set(excelData.map(item => item.season))];
+  seasonFilter.innerHTML = `<option value="">All Season</option>`;
+  seasons.sort();
+  seasons.forEach(season => {
+    if (season) {
+      seasonFilter.innerHTML += `<option value="${season}">${season}</option>`;
+    }
+  });
+}
+
+// TABLE
+function renderTable(data) {
+  if (data.length === 0) {
+    tableBody.innerHTML = `
+      <tr>
+        <td colspan="4" class="text-center py-10">
+          Data not found
+        </td>
+      </tr>
+    `;
+    return;
+  }
+
+  let html = '';
+  data.forEach(item => {
+    html += `
+      <tr class="border-b border-white/5 hover:bg-white/5 transition-all">
+        <td class="px-6 py-5">${item.no}</td>
+        <td class="px-6 py-5 font-bold">${item.name}</td>
+        <td class="px-6 py-5">
+          <span class="bg-indigo-500/20 text-indigo-300 px-4 py-2 rounded-full">
+            ${item.code}
+          </span>
+        </td>
+        <td class="px-6 py-5">
+          <span class="bg-pink-500/20 text-pink-300 px-4 py-2 rounded-full">
+            ${item.season}
+          </span>
+        </td>
+      </tr>
+    `;
+  });
+  tableBody.innerHTML = html;
+}
+
+// Normalize function for codes (remove spaces/dashes/underscores, lowercase)
+function normalizeCode(str) {
+  return String(str || '')
+    .toLowerCase()
+    .replace(/[\s\-_]/g, '');
+}
+
+// Normalize function for text (names/seasons)
+function normalizeText(str) {
+  return String(str || '')
+    .toLowerCase()
+    .trim();
+}
+
+// Tokenize a string into words (for name matching)
+function tokenize(str) {
+  return normalizeText(str).split(/\s+/).filter(Boolean);
+}
+
+// SEARCH
+function searchData() {
+  const rawQuery = searchInput.value.trim();
+  const queryTokens = tokenize(rawQuery);
+  const queryNormCode = normalizeCode(rawQuery);
+  const seasonSelected = seasonFilter.value;
+
+  if (!rawQuery && seasonSelected === '') {
+    renderTable(excelData);
+    return;
+  }
+
+  const filtered = excelData.filter(item => {
+    const nameTokens = tokenize(item.name);
+    const codeNorm = normalizeCode(item.code);
+    const seasonNorm = normalizeText(item.season);
+    const seasonMatch = seasonSelected === '' || seasonNorm === normalizeText(seasonSelected);
+
+    // Match if all query tokens appear in name (order-insensitive)
+    const nameMatch = queryTokens.length > 0
+      ? queryTokens.every(qt => nameTokens.some(nt => nt.includes(qt)))
+      : false;
+
+    // Match if normalized code contains normalized query
+    const codeMatch = queryNormCode && codeNorm.includes(queryNormCode);
+
+    return (nameMatch || codeMatch || (!rawQuery)) && seasonMatch;
+  });
+
+  renderTable(filtered);
+}
+
+// EVENT
+searchInput.addEventListener('input', searchData);
+seasonFilter.addEventListener('change', searchData);
+
+// AUTO LOAD
+window.onload = loadGoogleSheet;
+</script>
 
 </body>
 </html>
